@@ -169,7 +169,8 @@ function catchError(error: any): Promise<unknown> {
 
   try {
     value = monitorResolver[process.env.MONITOR_TYPE as MonitorType](body)
-      .replace(/\s\s+/g, ' ');
+      .trim()
+      .replace(/\s+/g, ' ');
   } catch (error) {
     await catchError(error);
     return;
