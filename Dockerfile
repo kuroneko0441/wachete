@@ -1,4 +1,4 @@
-FROM node:14-alpine as npm
+FROM node:14.19.1-alpine as npm
 WORKDIR /app
 COPY ./package.json ./package.json
 COPY ./package-lock.json ./package-lock.json
@@ -16,4 +16,4 @@ RUN npm ci --production
 COPY ./assets/ ./assets/
 COPY --from=builder /app/dist/ ./dist/
 
-CMD [ "node", "dist/main.js" ]
+CMD [ "npm", "start" ]

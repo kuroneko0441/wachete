@@ -1,6 +1,6 @@
 {
   "name": "wachete",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "main": "./dist/main.js",
   "scripts": {
     "start": "node dist/main.js",
@@ -11,9 +11,9 @@
     "compile": "babel ./src/ --extensions .ts --ignore \"src/**/*.spec.ts\" --no-comments --out-dir ./dist/"
   },
   "dependencies": {
-    "aws-sdk": "^2.1092.0",
     "axios": "^0.26.1",
-    "jsdom": "^19.0.0"
+    "jsdom": "^19.0.0",
+    "mongodb": "^4.4.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.17.6",
