@@ -1,6 +1,6 @@
 {
   "name": "wachete",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "main": "./dist/main.js",
   "scripts": {
     "start": "node dist/main.js",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "axios": "^0.26.1",
+    "iconv-lite": "^0.6.3",
     "jsdom": "^19.0.0",
     "mongodb": "^4.4.1"
   },
