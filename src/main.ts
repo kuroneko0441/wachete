@@ -1,10 +1,9 @@
-import * as AWS from 'aws-sdk';
-
 import {
   AxiosResponse,
   default as axios,
 } from 'axios';
 import { JSDOM } from 'jsdom';
+import { MongoClient } from 'mongodb';
 import { enableTimestampLogger } from './logger';
 
 enum MonitorType {
@@ -17,7 +16,7 @@ function resolveEnv(): void {
   const MONITOR_TYPE = process.env.MONITOR_TYPE as MonitorType;
   const MONITOR_EXPRESSION = process.env.MONITOR_EXPRESSION as string;
   const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL as string;
-  const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE as string;
+  const MONGO_URL = process.env.MONGO_URL as string;
 
   if (
     [
@@ -26,7 +25,7 @@ function resolveEnv(): void {
       [ MONITOR_TYPE, 'MONITOR_TYPE' ],
       [ MONITOR_EXPRESSION, 'MONITOR_EXPRESSION' ],
       [ SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL' ],
-      [ DYNAMODB_TABLE, 'DYNAMODB_TABLE' ],
+      [ MONGO_URL, 'MONGO_URL' ],
     ]
       .reduce(
         (error, [ value, key ], index, arr) => {
@@ -48,6 +47,7 @@ function resolveEnv(): void {
     [
       [ MONITOR_URL, 'MONITOR_URL' ],
       [ SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL' ],
+      [ MONGO_URL, 'MONGO_URL' ],
     ]
       .reduce(
         (error, [ value, key ], index, arr) => {
@@ -100,7 +100,7 @@ function resolveEnv(): void {
     'MONITOR_TYPE',
     'MONITOR_EXPRESSION',
     'SLACK_WEBHOOK_URL',
-    'DYNAMODB_TABLE',
+    'MONGO_URL',
   ].map(key => `  ${key}=${process.env[key]}`).join('\n')}`);
 }
 
@@ -176,34 +176,30 @@ function catchError(error: any): Promise<unknown> {
     return;
   }
 
-  const documentClient = new AWS.DynamoDB.DocumentClient();
+  const client = new MongoClient(process.env.MONGO_URL!);
+  await client.connect();
+  const collection = client.db().collection('status');
 
-  const lastValue = (await documentClient.get({
-    TableName: process.env.DYNAMODB_TABLE!,
-    Key: {
-      name: process.env.MONITOR_NAME,
-    },
-  }).promise()).Item?.value;
-
-  await documentClient.put({
-    TableName: process.env.DYNAMODB_TABLE!,
-    Item: {
-      name: process.env.MONITOR_NAME,
-      value: value,
-    },
-  }).promise();
+  const lastValue = (await collection.findOne({ name: process.env.MONITOR_NAME }))?.value;
 
   console.log(`Last value: ${JSON.stringify(lastValue)}`);
   console.log(`New value: ${JSON.stringify(value)}`);
 
   if (lastValue !== value) {
+    await collection.replaceOne(
+      {
+        name: process.env.MONITOR_NAME
+      },
+      {
+        name: process.env.MONITOR_NAME,
+        value: value,
+      },
+      {
+        upsert: true,
+      },
+    );
     await notifySlack(`Value: ${value}`);
   }
 
-  await documentClient.delete({
-    TableName: process.env.DYNAMODB_TABLE!,
-    Key: {
-      name: process.env.MONITOR_NAME,
-    },
-  })
+  await client.close();
 })();
