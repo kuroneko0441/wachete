@@ -5,6 +5,7 @@ import {
 import { JSDOM } from 'jsdom';
 import { MongoClient } from 'mongodb';
 import { enableTimestampLogger } from './logger';
+import * as iconv from 'iconv-lite';
 
 enum MonitorType {
   XPATH = 'XPATH',
@@ -159,7 +160,21 @@ function catchError(error: any): Promise<unknown> {
   let body!: string;
 
   try {
-    body = (await axios.get(process.env.MONITOR_URL!)).data;
+    const response = await axios.get(process.env.MONITOR_URL!);
+
+    const contentType = response.headers['content-type'];
+    const charset = (/charset=([^;]*)/.exec(contentType) || [])[1] || 'utf-8';
+
+    const buffer = (await axios.request(
+      {
+        method: 'GET',
+        url: process.env.MONITOR_URL,
+        responseType: 'arraybuffer',
+        responseEncoding: 'binary',
+      },
+    )).data;
+
+    body = iconv.decode(Buffer.from(buffer), charset);
   } catch (error) {
     await catchError(error);
     return;
